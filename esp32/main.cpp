@@ -15,7 +15,8 @@ String pairedUsername = "";
 const char* WIFI_SSID = "SIMON_123";
 const char* WIFI_PASSWORD = "123";
 
-const char* MQTT_SERVER = "10.33.72.227"; 
+// const char* MQTT_SERVER = "10.33.72.227"; 
+const char* MQTT_SERVER = "192.168.1.10"; 
 const uint16_t MQTT_PORT = 1883;
 
 // --- Game ---

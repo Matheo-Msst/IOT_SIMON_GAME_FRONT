@@ -1,12 +1,271 @@
 {% extends "base.html" %}
-{% block title %}Pair ESP32{% endblock %}
+
+{% block title %}Appairage ESP32 - Simon Communautaire{% endblock %}
+
 {% block content %}
-<h1>Pair ESP32</h1>
-{% if success %}<div class="info">{{ success }}</div>{% endif %}
-<form method="post">
-  SSID ESP32: <input name="ssid"><br><br>
-  Password: <input type="password" name="password"><br><br>
-  <button>Envoyer</button>
-</form>
-<a href="{{ url_for('dashboard') }}">Retour Dashboard</a>
+<style>
+    .pair-container {
+        max-width: 600px;
+        margin: 2rem auto;
+    }
+
+    .pair-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 3rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: fadeInUp 0.6s ease;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .pair-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .pair-header h2 {
+        color: var(--dark);
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .pair-header p {
+        color: #64748b;
+        font-size: 1.1rem;
+    }
+
+    .device-icon {
+        text-align: center;
+        font-size: 4rem;
+        margin: 2rem 0;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.1);
+        }
+    }
+
+    .icon-input {
+        position: relative;
+    }
+
+    .icon-input::before {
+        content: attr(data-icon);
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.2rem;
+        z-index: 1;
+    }
+
+    .icon-input input {
+        padding-left: 3rem;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 1.25rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1.5rem;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.4);
+    }
+
+    .info-box {
+        background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+        border-left: 4px solid var(--primary);
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        margin-top: 2rem;
+    }
+
+    .info-box h3 {
+        color: var(--primary-dark);
+        margin-bottom: 0.5rem;
+        font-size: 1.1rem;
+    }
+
+    .info-box ul {
+        margin-left: 1.5rem;
+        color: #475569;
+    }
+
+    .info-box li {
+        margin: 0.5rem 0;
+    }
+
+    .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--success);
+        margin-right: 0.5rem;
+        animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+    }
+
+    .connection-steps {
+        display: grid;
+        gap: 1rem;
+        margin: 2rem 0;
+    }
+
+    .step {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .step:hover {
+        background: #f1f5f9;
+        transform: translateX(5px);
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+
+    .step-content {
+        flex: 1;
+    }
+
+    .step-title {
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .step-description {
+        color: #64748b;
+        font-size: 0.9rem;
+    }
+</style>
+
+<div class="pair-container">
+    <div class="pair-card">
+        <div class="pair-header">
+            <h2>🔗 Appairage ESP32</h2>
+            <p>Connectez votre appareil Simon</p>
+        </div>
+
+        <div class="device-icon">
+            📡
+        </div>
+
+        <div class="connection-steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <div class="step-title">Allumez votre ESP32</div>
+                    <div class="step-description">Assurez-vous que l'appareil est sous tension</div>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <div class="step-title">Notez le SSID</div>
+                    <div class="step-description">SIMON_123</div>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <div class="step-title">Entrez les informations</div>
+                    <div class="step-description">Saisissez le SSID et le mot de passe ci-dessous</div>
+                </div>
+            </div>
+        </div>
+
+        <form method="POST" action="/pair">
+            <div class="form-group">
+                <label for="ssid">
+                    <span class="status-indicator"></span>
+                    SSID de l'ESP32
+                </label>
+                <div class="icon-input" data-icon="📡">
+                    <input 
+                        type="text" 
+                        id="ssid" 
+                        name="ssid" 
+                        required 
+                        placeholder="SIMON_123"
+                        pattern="SIMON_123"
+                        title="Le SSID est SIMON_123"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe WiFi</label>
+                <div class="icon-input" data-icon="🔑">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        placeholder="Entrez le mot de passe de l'ESP32"
+                    >
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                🚀 Connecter l'appareil
+            </button>
+        </form>
+
+        <div class="info-box">
+            <h3>💡 Informations importantes</h3>
+            <ul>
+                <li>Le SSID est <strong>SIMON_123</strong></li>
+                <li>L'appairage peut prendre quelques secondes</li>
+                <li>Une fois connecté, vos scores seront automatiquement synchronisés</li>
+                <li>Vous pouvez réappairer à tout moment</li>
+            </ul>
+        </div>
+    </div>
+</div>
 {% endblock %}

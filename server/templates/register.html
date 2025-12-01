@@ -1,12 +1,245 @@
 {% extends "base.html" %}
-{% block title %}Register{% endblock %}
+
+{% block title %}Inscription - Simon Communautaire{% endblock %}
+
 {% block content %}
-<h1>Créer un compte</h1>
-{% if error %}<div class="info">{{ error }}</div>{% endif %}
-<form method="post">
-  <input name="username" placeholder="Nom d'utilisateur"><br><br>
-  <input type="password" name="password" placeholder="Mot de passe"><br><br>
-  <button>Créer un compte</button>
-</form>
-<p>Déjà inscrit ? <a href="{{ url_for('login') }}">Se connecter</a></p>
+<style>
+    .register-container {
+        max-width: 450px;
+        margin: 2rem auto;
+    }
+
+    .register-card {
+        background: white;
+        border-radius: 1.5rem;
+        padding: 3rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: fadeInUp 0.6s ease;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .register-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .register-header h2 {
+        color: var(--dark);
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .register-header p {
+        color: #64748b;
+    }
+
+    .icon-input {
+        position: relative;
+    }
+
+    .icon-input::before {
+        content: attr(data-icon);
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.2rem;
+        z-index: 1;
+    }
+
+    .icon-input input {
+        padding-left: 3rem;
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+    }
+
+    .login-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: #64748b;
+    }
+
+    .login-link a {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s ease;
+    }
+
+    .login-link a:hover {
+        color: var(--primary-dark);
+    }
+
+    .password-strength {
+        margin-top: 0.5rem;
+        height: 4px;
+        background: #e2e8f0;
+        border-radius: 2px;
+        overflow: hidden;
+    }
+
+    .password-strength-bar {
+        height: 100%;
+        width: 0%;
+        transition: all 0.3s ease;
+    }
+
+    .strength-weak { 
+        width: 33%; 
+        background: var(--danger); 
+    }
+
+    .strength-medium { 
+        width: 66%; 
+        background: var(--warning); 
+    }
+
+    .strength-strong { 
+        width: 100%; 
+        background: var(--success); 
+    }
+
+    .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 2rem 0;
+        color: #94a3b8;
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .divider span {
+        padding: 0 1rem;
+        font-size: 0.875rem;
+    }
+</style>
+
+<div class="register-container">
+    <div class="register-card">
+        <div class="register-header">
+            <h2>📝 Inscription</h2>
+            <p>Créez votre compte pour jouer à Simon</p>
+        </div>
+
+        <form method="POST" action="/register">
+            <div class="form-group">
+                <label for="username">Nom d'utilisateur</label>
+                <div class="icon-input" data-icon="👤">
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        required 
+                        placeholder="Choisissez un nom d'utilisateur"
+                        autocomplete="username"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <div class="icon-input" data-icon="🔒">
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        placeholder="Créez un mot de passe sécurisé"
+                        autocomplete="new-password"
+                        oninput="checkPasswordStrength(this.value)"
+                    >
+                </div>
+                <div class="password-strength">
+                    <div class="password-strength-bar" id="strengthBar"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirm_password">Confirmer le mot de passe</label>
+                <div class="icon-input" data-icon="✓">
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        required 
+                        placeholder="Confirmez votre mot de passe"
+                        autocomplete="new-password"
+                    >
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                Créer mon compte
+            </button>
+        </form>
+
+        <div class="divider">
+            <span>OU</span>
+        </div>
+
+        <div class="login-link">
+            Déjà un compte ? <a href="/login">Connectez-vous</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function checkPasswordStrength(password) {
+        const bar = document.getElementById('strengthBar');
+        const length = password.length;
+        
+        if (length === 0) {
+            bar.className = 'password-strength-bar';
+            return;
+        }
+        
+        let strength = 0;
+        if (length >= 8) strength++;
+        if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength++;
+        if (/\d/.test(password)) strength++;
+        if (/[^a-zA-Z0-9]/.test(password)) strength++;
+        
+        bar.className = 'password-strength-bar';
+        if (strength <= 1) {
+            bar.classList.add('strength-weak');
+        } else if (strength <= 3) {
+            bar.classList.add('strength-medium');
+        } else {
+            bar.classList.add('strength-strong');
+        }
+    }
+</script>
 {% endblock %}
