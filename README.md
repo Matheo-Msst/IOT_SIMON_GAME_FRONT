@@ -125,10 +125,6 @@ Jeu Simon                              scores.json + users.db
 - Authentification requise pour accéder au dashboard
 - Appairage ESP32 avec mot de passe
 
-## 🎨 Personnalisation
-
-Pour modifier le thème ou les couleurs, éditez le fichier `templates/base.html`. Les styles CSS sont intégrés dans le template.
-
 ## 📝 Format des Scores
 
 ```json
