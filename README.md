@@ -69,6 +69,10 @@ mosquitto -v
 ```bash
 cd server ; python main.py
 ```
+> OU
+```bash
+cd server ; python3 main.py
+```
 
 L'application sera accessible sur `http://localhost:5000`
 
