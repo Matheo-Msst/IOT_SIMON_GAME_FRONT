@@ -1,0 +1,26 @@
+[
+  {
+    "ssid": "SIMON_123",
+    "username": "alice",
+    "score": 5,
+    "ts": 1701427200
+  },
+  {
+    "ssid": "SIMON_123",
+    "username": "bob",
+    "score": 8,
+    "ts": 1701427260
+  },
+  {
+    "ssid": "SIMON_456",
+    "username": "charlie",
+    "score": 3,
+    "ts": 1701427320
+  },
+  {
+    "ssid": "SIMON_123",
+    "username": "alice",
+    "score": 10,
+    "ts": 1701427380
+  }
+]
