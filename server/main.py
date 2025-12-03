@@ -34,19 +34,32 @@ def init_db():
 init_db()
 
 # --- MQTT ---
-mqtt_client = mqtt.Client()
+mqtt_client = mqtt.Client(client_id="FlaskServer", protocol=mqtt.MQTTv311)
+mqtt_connected = False
+
+# Variables pour appairage
+pair_result = None
+pair_event = threading.Event()
 
 def on_connect(client, userdata, flags, rc):
-    print(f"MQTT connected with code {rc}")
-    client.subscribe("simon/scores")
-    client.subscribe("simon/pair/ack")
+    global mqtt_connected
+    if rc == 0:
+        mqtt_connected = True
+        print("MQTT connecté avec succès !")
+        client.subscribe("simon/scores")
+        client.subscribe("simon/pair/ack")
+    else:
+        print(f"Erreur de connexion MQTT, code: {rc}")
 
 def on_message(client, userdata, msg):
+    global pair_result
     payload = msg.payload.decode()
     try:
         data = json.loads(payload)
     except:
+        print("Message MQTT invalide:", payload)
         return
+
     if msg.topic == "simon/scores":
         os.makedirs(SCORES_DIR, exist_ok=True)
         try:
@@ -61,7 +74,7 @@ def on_message(client, userdata, msg):
             "username": data.get("username"),
             "score": data.get("score"),
             "ts": timestamp,
-            "date": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))  # <-- date lisible
+            "date": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(timestamp))
         })
 
         with open(SCORES_FILE, 'w') as f:
@@ -69,6 +82,8 @@ def on_message(client, userdata, msg):
 
     elif msg.topic == "simon/pair/ack":
         print(f"{data.get('ssid')} paired with {data.get('username')} - status: {data.get('status')}")
+        pair_result = data
+        pair_event.set()  # Débloque l'attente dans /pair
 
 mqtt_client.on_connect = on_connect
 mqtt_client.on_message = on_message
@@ -82,7 +97,7 @@ def index():
 
 @app.route('/register', methods=['GET','POST'])
 def register():
-    if request.method=='POST':
+    if request.method == 'POST':
         username = request.form['username']
         password = generate_password_hash(request.form['password'])
         conn = sqlite3.connect(DB_FILE)
@@ -98,7 +113,7 @@ def register():
 
 @app.route('/login', methods=['GET','POST'])
 def login():
-    if request.method=='POST':
+    if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         conn = sqlite3.connect(DB_FILE)
@@ -116,21 +131,45 @@ def login():
 def pair():
     if 'username' not in session:
         return redirect(url_for('login'))
-    if request.method=='POST':
-        ssid = request.form['ssid']
-        pwd = request.form['password']
-        mqtt_client.publish("simon/pair", json.dumps({
-            "ssid": ssid,
-            "password": pwd,
-            "username": session['username']
-        }))
-        return render_template('pair.html', username=session['username'], success="Demande de pairing envoyée à l'ESP32")
-    return render_template('pair.html', username=session['username'])
+
+    success_msg = None
+    error_msg = None
+
+    if request.method == 'POST':
+        ssid = request.form['ssid'].strip()
+        pwd = request.form.get('password','').strip()  # <-- mot de passe optionnel
+
+        if mqtt_connected:
+            pair_event.clear()
+            global pair_result
+            pair_result = None
+
+            payload = json.dumps({
+                "ssid": ssid,
+                "password": pwd,  # vide si Wi-Fi ouvert
+                "username": session['username']
+            })
+            mqtt_client.publish("simon/pair", payload)
+
+            # Attente de la réponse MQTT max 10 secondes
+            if pair_event.wait(timeout=10):
+                if pair_result.get("status") == "paired":
+                    return redirect(url_for('dashboard'))
+                else:
+                    error_msg = f"Appairage échoué pour {pair_result.get('ssid')}"
+            else:
+                error_msg = "Aucune réponse de l'ESP32, réessayez."
+        else:
+            error_msg = "Serveur MQTT non connecté, réessayez plus tard"
+
+    return render_template('pair.html', username=session['username'], success=success_msg, error=error_msg)
+
 
 @app.route('/dashboard')
 def dashboard():
     if 'username' not in session:
         return redirect(url_for('login'))
+
     try:
         with open(SCORES_FILE,'r') as f:
             scores = json.load(f)
@@ -145,6 +184,7 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-if __name__=="__main__":
+if __name__ == "__main__":
     os.makedirs(SCORES_DIR, exist_ok=True)
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Eviter debug=True pour MQTT stable
+    app.run(host="0.0.0.0", port=5000, debug=False)

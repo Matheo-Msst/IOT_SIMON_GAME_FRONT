@@ -3,12 +3,10 @@
 #include <ArduinoJson.h>
 
 // --- Pins ---
-const int ledPins[4] = {2, 3, 0, 1};
-const int buttonPins[4] = {4, 5, 6, 7};
-
-// --- Buzzer ---
-const int buzzerPin = 9;
-const int buzzerChannel = 0; // PWM channel for ESP32-C3
+const int ledPins[4] = {2, 4, 5, 6};     // LED0, LED1, LED2, LED3
+const int buttonPins[4] = {7, 8, 9, 10}; // bouton0..3
+const int buzzerPin = 3;                  // PWM pin pour buzzer
+const int buzzerChannel = 0; // PWM channel
 
 WiFiClient espClient;
 PubSubClient mqtt(espClient);
@@ -16,50 +14,46 @@ PubSubClient mqtt(espClient);
 String deviceId;
 String pairedUsername = "";
 
-const char* WIFI_SSID = "SIMON_123";
-const char* WIFI_PASSWORD = "123";
+// --- Config réseau ---
+const char* DEFAULT_WIFI_SSID = "Teddy";
+const char* DEFAULT_WIFI_PASSWORD = ""; // Wi-Fi ouvert possible
 
-// const char* MQTT_SERVER = "10.33.72.227"; 
-const char* MQTT_SERVER = "192.168.1.10"; 
+const char* MQTT_SERVER = "10.95.140.175";
 const uint16_t MQTT_PORT = 1883;
 
 // --- Game ---
 const int MAX_SEQUENCE = 32;
 int sequence[MAX_SEQUENCE];
-int currentRound = 1;
+int currentRound = 0;
 int inputIndex = 0;
-enum GameState { SHOW_SEQUENCE, WAIT_INPUT, GAME_OVER };
-GameState gameState = SHOW_SEQUENCE;
+enum GameState { WAIT_START, SHOW_SEQUENCE, WAIT_INPUT, GAME_OVER, WAIT_PAIRING };
+GameState gameState = WAIT_START;
 
 volatile bool buttonFlags[4] = {false,false,false,false};
 bool buttonLocked[4] = {false,false,false,false};
 unsigned long lastPressTime[4] = {0,0,0,0};
 const unsigned long debounceDelay = 200;
 
-// --- Buzzer Functions ---
-void beep(int freq, int duration) {
-  ledcWriteTone(buzzerChannel, freq);
-  delay(duration);
-  ledcWriteTone(buzzerChannel, 0);
-}
+// --- Wi-Fi pairing ---
+String pairingSSID = "";
+String pairingPassword = "";
+bool pairingInProgress = false;
+unsigned long pairingStartTime = 0;
+const unsigned long PAIRING_TIMEOUT = 10000; // 10s
 
-void beepWiFiConnected() { beep(1500, 80); }
-void beepMQTTConnected() { beep(1800, 80); }
-void beepGoodInput()     { beep(2000, 50); }
-void beepStartGame()     { beep(1200, 100); }
+// --- Timing démarrage ---
+bool gameReady = false;
+unsigned long gameStartTime = 0;
+const unsigned long START_DELAY = 5000; // 5s
 
-void beepRoundWin() {
-  beep(1800, 80);
-  delay(60);
-  beep(2000, 80);
-}
-
-void beepGameOver() {
-  for(int i=0;i<3;i++){
-    beep(600, 120);
-    delay(80);
-  }
-}
+// --- Buzzer ---
+void beep(int freq, int durationMs) { ledcWriteTone(buzzerChannel, freq); delay(durationMs); ledcWriteTone(buzzerChannel, 0); }
+void beepWiFiConnected() { beep(1500, 500); }
+void beepMQTTConnected() { beep(1800, 500); }
+void beepGoodInput() { beep(2000, 100); }
+void beepStartGame() { beep(1200, 500); }
+void beepRoundWin() { beep(1800,100); delay(60); beep(2000,100); }
+void beepGameOver() { for(int i=0;i<3;i++){ beep(600,100); delay(80); } }
 
 // --- ISR ---
 void IRAM_ATTR isrButton0() { buttonFlags[0]=true; }
@@ -74,44 +68,36 @@ void callback(char* topic, byte* payload, unsigned int length){
   for(unsigned int i=0;i<length;i++) payloadStr += (char)payload[i];
 
   StaticJsonDocument<256> doc;
-  if(deserializeJson(doc,payloadStr)) return;
+  DeserializationError err = deserializeJson(doc, payloadStr);
+  if(err) return;
 
   if(sTopic == "simon/pair"){
-    const char* ssid = doc["ssid"] | "";
-    const char* pwd  = doc["password"] | "";
-    const char* user = doc["username"] | "";
-
-    WiFi.begin(ssid,pwd);
-    unsigned long start = millis();
-    while(WiFi.status()!=WL_CONNECTED && millis()-start < 10000){
-      delay(500);
-    }
-    StaticJsonDocument<128> ack;
-    ack["ssid"] = String(ssid);
-    ack["username"] = String(user);
-    ack["status"] = WiFi.status()==WL_CONNECTED ? "paired" : "failed";
-    char buf[128];
-    size_t n = serializeJson(ack,buf);
-    mqtt.publish("simon/pair/ack",buf,n);
-
-    if(WiFi.status()==WL_CONNECTED)
-      pairedUsername = String(user);
+    pairingSSID = doc["ssid"] | "";
+    pairingPassword = doc["password"] | "";
+    pairedUsername = doc["username"] | "";
+    pairingInProgress = true;
+    pairingStartTime = millis();
+    Serial.println("Appairage demandé pour SSID: " + pairingSSID);
   }
 }
 
-// --- MQTT Connect ---
+// --- MQTT connect ---
 void ensureMqtt(){
   while(!mqtt.connected()){
     String clientId = "ESP32-" + deviceId;
     if(mqtt.connect(clientId.c_str())){
       mqtt.subscribe("simon/pair");
       beepMQTTConnected();
-    } else { 
+      Serial.println("MQTT connecté");
+    } else {
+      Serial.print("Erreur MQTT, retry in 2s: ");
+      Serial.println(mqtt.state());
       delay(2000);
     }
   }
 }
 
+// --- Publish score ---
 void publishScore(int score){
   if(!mqtt.connected()) ensureMqtt();
   if(pairedUsername=="") return;
@@ -123,7 +109,7 @@ void publishScore(int score){
 
   char buf[256];
   size_t n = serializeJson(doc,buf);
-  mqtt.publish("simon/scores",buf,n);
+  mqtt.publish("simon/scores", buf, n);
 }
 
 // --- Game Logic ---
@@ -161,9 +147,15 @@ void showSequence(){
 
 void handleUserInput(int idx){
   if(idx != sequence[inputIndex]){
+    // Game Over → passage en WAIT_PAIRING
     beepGameOver();
-    gameState = GAME_OVER;
+    gameState = WAIT_PAIRING;
     publishScore(currentRound-1);
+
+    // Éteindre toutes les LEDs et buzzer
+    for(int i=0;i<4;i++) digitalWrite(ledPins[i], LOW);
+    ledcWriteTone(buzzerChannel, 0);
+    Serial.println("Game over, en attente d'un nouvel appairage...");
     return;
   }
 
@@ -184,73 +176,109 @@ void handleUserInput(int idx){
   }
 }
 
-void gameOverAnimation(){
-  beepGameOver();
-  for(int i=0;i<3;i++){
-    for(int j=0;j<4;j++) digitalWrite(ledPins[j], HIGH);
-    delay(150);
-    for(int j=0;j<4;j++) digitalWrite(ledPins[j], LOW);
-    delay(150);
+// --- Wi-Fi connect ---
+void connectWiFi(){
+  Serial.print("Connexion au Wi-Fi...");
+  WiFi.begin(DEFAULT_WIFI_SSID, DEFAULT_WIFI_PASSWORD);
+
+  int attempts = 0;
+  while(WiFi.status() != WL_CONNECTED && attempts < 20){
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+
+  if(WiFi.status() == WL_CONNECTED){
+    Serial.println("\nConnecté au Wi-Fi!");
+    Serial.print("IP locale: ");
+    Serial.println(WiFi.localIP());
+    beepWiFiConnected();
+  } else {
+    Serial.println("\nÉchec de connexion au Wi-Fi");
   }
 }
 
+// --- Setup ---
 void setup(){
   Serial.begin(115200);
 
-  // Init LEDs
-  for(int i=0;i<4;i++){
-    pinMode(ledPins[i], OUTPUT);
-    digitalWrite(ledPins[i], LOW);
-  }
+  for(int i=0;i<4;i++){ pinMode(ledPins[i], OUTPUT); digitalWrite(ledPins[i], LOW); }
+  for(int i=0;i<4;i++){ pinMode(buttonPins[i], INPUT_PULLUP); }
 
-  // Init Buttons
-  for(int i=0;i<4;i++){
-    pinMode(buttonPins[i], INPUT_PULLUP);
-  }
-
-  // Interrupts
   attachInterrupt(buttonPins[0], isrButton0, FALLING);
   attachInterrupt(buttonPins[1], isrButton1, FALLING);
   attachInterrupt(buttonPins[2], isrButton2, FALLING);
   attachInterrupt(buttonPins[3], isrButton3, FALLING);
 
-  // Buzzer init
   ledcAttachPin(buzzerPin, buzzerChannel);
   ledcSetup(buzzerChannel, 2000, 10);
 
   deviceId = WiFi.macAddress();
   deviceId.replace(":", "");
 
-  // WiFi
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-  Serial.print("Connecting to WiFi ");
-
-  while(WiFi.status()!=WL_CONNECTED){
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi connected, IP: " + WiFi.localIP().toString());
-  beepWiFiConnected();
-
+  connectWiFi();
   mqtt.setServer(MQTT_SERVER, MQTT_PORT);
   mqtt.setCallback(callback);
   ensureMqtt();
 
-  startNewGame();
+  // Démarrage différé du jeu
+  gameStartTime = millis();
 }
 
+// --- Loop ---
 void loop(){
-  if(!mqtt.connected()) ensureMqtt();
   mqtt.loop();
 
+  // --- Gestion appairage ---
+  if(pairingInProgress){
+    if(WiFi.status()!=WL_CONNECTED){
+      WiFi.begin(pairingSSID.c_str(), pairingPassword.c_str());
+    }
+
+    if(WiFi.status()==WL_CONNECTED){
+      pairingInProgress = false;
+      Serial.println("Appairage réussi avec: " + pairedUsername);
+      beepWiFiConnected();
+
+      StaticJsonDocument<128> ack;
+      ack["ssid"] = pairingSSID;
+      ack["username"] = pairedUsername;
+      ack["status"] = "paired";
+      char buf[128];
+      size_t n = serializeJson(ack, buf);
+      mqtt.publish("simon/pair/ack", buf, n);
+
+      // Démarrage du jeu après appairage
+      startNewGame();
+      gameReady = true;
+    } else if(millis() - pairingStartTime > PAIRING_TIMEOUT){
+      pairingInProgress = false;
+      Serial.println("Appairage échoué");
+      StaticJsonDocument<128> ack;
+      ack["ssid"] = pairingSSID;
+      ack["username"] = pairedUsername;
+      ack["status"] = "failed";
+      char buf[128];
+      size_t n = serializeJson(ack, buf);
+      mqtt.publish("simon/pair/ack", buf, n);
+    }
+  }
+
+  // --- Si le jeu est en attente, ne rien faire ---
+  if(gameState == WAIT_PAIRING) return;
+
+  // --- Attente démarrage 5s ---
+  if(!gameReady && millis() - gameStartTime >= START_DELAY){
+    startNewGame();
+    gameReady = true;
+  }
+
+  // --- Gestion boutons ---
   for(int i=0;i<4;i++){
-    if(buttonLocked[i] && digitalRead(buttonPins[i])==HIGH)
-      buttonLocked[i]=false;
-
+    if(buttonLocked[i] && digitalRead(buttonPins[i])==HIGH) buttonLocked[i]=false;
     if(buttonFlags[i]){
-      buttonFlags[i] = false;
+      buttonFlags[i]=false;
       unsigned long now = millis();
-
       if(buttonLocked[i]) continue;
 
       if(digitalRead(buttonPins[i])==LOW && now-lastPressTime[i] > debounceDelay){
@@ -258,14 +286,16 @@ void loop(){
         buttonLocked[i]=true;
 
         if(gameState==WAIT_INPUT) handleUserInput(i);
-        else if(gameState==GAME_OVER) startNewGame();
       }
     }
   }
 
+  // --- Game state ---
   switch(gameState){
     case SHOW_SEQUENCE: showSequence(); break;
     case WAIT_INPUT: break;
-    case GAME_OVER: gameOverAnimation(); gameState = GAME_OVER; break;
+    case GAME_OVER: break; // plus utilisé
+    case WAIT_START: break;
+    case WAIT_PAIRING: break; // ne rien faire
   }
 }

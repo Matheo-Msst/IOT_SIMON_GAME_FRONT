@@ -6,21 +6,31 @@
     "ts": 1701427200
   },
   {
-    "ssid": "SIMON_123",
-    "username": "bob",
-    "score": 8,
-    "ts": 1701427260
+    "ssid": "Teddy",
+    "username": "admin",
+    "score": 4,
+    "ts": 1764755089,
+    "date": "2025-12-03 10:44:49"
   },
   {
-    "ssid": "SIMON_123",
-    "username": "charlie",
-    "score": 3,
-    "ts": 1701427320
+    "ssid": "Teddy",
+    "username": "testeur1",
+    "score": 0,
+    "ts": 1764755304,
+    "date": "2025-12-03 10:48:24"
   },
   {
-    "ssid": "SIMON_123",
-    "username": "alice",
-    "score": 10,
-    "ts": 1701427380
+    "ssid": "Teddy",
+    "username": "testeur1",
+    "score": 4,
+    "ts": 1764755343,
+    "date": "2025-12-03 10:49:03"
+  },
+  {
+    "ssid": "Teddy",
+    "username": "testeur1",
+    "score": 9,
+    "ts": 1764755498,
+    "date": "2025-12-03 10:51:38"
   }
 ]

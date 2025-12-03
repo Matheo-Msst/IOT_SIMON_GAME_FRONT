@@ -192,9 +192,7 @@
             <p>Connectez votre appareil Simon</p>
         </div>
 
-        <div class="device-icon">
-            📡
-        </div>
+        <div class="device-icon">📡</div>
 
         <div class="connection-steps">
             <div class="step">
@@ -208,14 +206,14 @@
                 <div class="step-number">2</div>
                 <div class="step-content">
                     <div class="step-title">Notez le SSID</div>
-                    <div class="step-description">SIMON_123</div>
+                    <div class="step-description">Le SSID de votre ESP32</div>
                 </div>
             </div>
             <div class="step">
                 <div class="step-number">3</div>
                 <div class="step-content">
                     <div class="step-title">Entrez les informations</div>
-                    <div class="step-description">Saisissez le SSID et le mot de passe ci-dessous</div>
+                    <div class="step-description">Saisissez le SSID et le mot de passe (laisser vide si ouvert)</div>
                 </div>
             </div>
         </div>
@@ -227,40 +225,24 @@
                     SSID de l'ESP32
                 </label>
                 <div class="icon-input" data-icon="📡">
-                    <input 
-                        type="text" 
-                        id="ssid" 
-                        name="ssid" 
-                        required 
-                        placeholder="SIMON_123"
-                        pattern="SIMON_123"
-                        title="Le SSID est SIMON_123"
-                    >
+                    <input type="text" id="ssid" name="ssid" required placeholder="SSID">
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="password">Mot de passe WiFi</label>
+                <label for="password">Mot de passe WiFi (optionnel)</label>
                 <div class="icon-input" data-icon="🔑">
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        required 
-                        placeholder="Entrez le mot de passe de l'ESP32"
-                    >
+                    <input type="password" id="password" name="password" placeholder="Laisser vide si Wi-Fi ouvert">
                 </div>
             </div>
 
-            <button type="submit" class="submit-btn">
-                🚀 Connecter l'appareil
-            </button>
+            <button type="submit" class="submit-btn">🚀 Connecter l'appareil</button>
         </form>
 
         <div class="info-box">
             <h3>💡 Informations importantes</h3>
             <ul>
-                <li>Le SSID est <strong>SIMON_123</strong></li>
+                <li>Le SSID est celui indiqué sur l'ESP32</li>
                 <li>L'appairage peut prendre quelques secondes</li>
                 <li>Une fois connecté, vos scores seront automatiquement synchronisés</li>
                 <li>Vous pouvez réappairer à tout moment</li>
