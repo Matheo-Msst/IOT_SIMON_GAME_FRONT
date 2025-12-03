@@ -12,7 +12,7 @@ Le projet se compose de trois éléments principaux :
 
 ### 1. **ESP32 + Circuit Simon**
 - Microcontrôleur ESP32 gérant la logique du jeu
-- 4 LEDs de couleur (rouge, verte, bleue, jaune) 
+- 4 LEDs de couleur (rouge, verte, bleue, jaune)
 - 4 boutons poussoirs correspondants
 - 1 buzzer pour les sons
 - Communication MQTT pour l'envoi des scores
@@ -24,6 +24,8 @@ Le projet se compose de trois éléments principaux :
   - `simon/scores` : réception des scores
   - `simon/pair` : appairage ESP32
   - `simon/pair/ack` : confirmation d'appairage
+- MQTT utilise le port 1883 par défaut
+- Messages JSON standardisés pour scores et appairage
 
 ### 3. **Serveur Web Flask**
 - Interface utilisateur web
@@ -51,13 +53,14 @@ Le projet se compose de trois éléments principaux :
 # ESP32 avec MicroPython/Arduino
 # git
 ```
-```bash 
-git clone https://github.com/Matheo-Msst/IOT_SIMON_GAME.git 
+```bash
+git clone https://github.com/Matheo-Msst/IOT_SIMON_GAME.git
 ```
+
 ### Installation du serveur
 ```bash
 cd server
-pip install flask paho-mqtt werkzeug
+pip install -r requirements.txt
 ```
 
 ### Lancement du broker MQTT
@@ -67,17 +70,10 @@ mosquitto -v
 
 ### Lancement du serveur Flask
 ```bash
-python3 -m venv venv ; source venv/bin/activate
-``` 
-```bash
+cd server
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-```
-```bash
-cd server ; python main.py
->>>>>>> 03a0b72 (readme)
-```
-> OU
-```bash
 python3 main.py
 ```
 
@@ -112,7 +108,6 @@ L'application sera accessible sur `http://localhost:5000`
         ├── register.html      # Page d'inscription
         ├── pair.html          # Page d'appairage
         └── dashboard.html     # Tableau de bord
-
 ```
 
 ## 🎯 Flux de Données
@@ -146,6 +141,16 @@ Jeu Simon                              scores.json + users.db
 }
 ```
 
+## 📡 MQTT
+
+- Le serveur Flask se connecte au broker MQTT à `127.0.0.1:1883`
+- Topics principaux :
+  - `simon/scores` : réception des scores publiés par les ESP32
+  - `simon/pair` : ESP32 envoie les informations pour appairage
+  - `simon/pair/ack` : confirmation d'appairage envoyée par le serveur
+- Messages format JSON avec champs `ssid`, `username`, `score`, `status`
+- Utilisation de `paho-mqtt` côté serveur pour la communication asynchrone
+
 ## 👥 Contributeurs
 
 - **Yarkin Oner**
@@ -154,3 +159,4 @@ Jeu Simon                              scores.json + users.db
 ---
 
 *Projet réalisé dans le cadre d'un cours d'électronique et systèmes embarqués*
+
