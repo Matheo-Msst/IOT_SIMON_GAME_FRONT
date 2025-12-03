@@ -67,9 +67,6 @@ mosquitto -v
 
 ### Lancement du serveur Flask
 ```bash
-<<<<<<< HEAD
-python main.py
-=======
 python3 -m venv venv ; source venv/bin/activate
 ```
 ```bash
@@ -101,19 +98,18 @@ L'application sera accessible sur `http://localhost:5000`
 
 ```
 .
-├── server/
-│   ├── main.py                 # Serveur Flask principal
-│   ├── users.db               # Base de données SQLite
-│   ├── json/
-│   │   └── scores.json        # Stockage des scores
-│   └── templates/
-│       ├── base.html          # Template de base
-│       ├── login.html         # Page de connexion
-│       ├── register.html      # Page d'inscription
-│       ├── pair.html          # Page d'appairage
-│       └── dashboard.html     # Tableau de bord
-└── esp32/
-    └── [code ESP32]           # Code pour le microcontrôleur
+└── server/
+    ├── main.py                 # Serveur Flask principal
+    ├── users.db               # Base de données SQLite
+    ├── json/
+    │   └── scores.json        # Stockage des scores
+    └── templates/
+        ├── base.html          # Template de base
+        ├── login.html         # Page de connexion
+        ├── register.html      # Page d'inscription
+        ├── pair.html          # Page d'appairage
+        └── dashboard.html     # Tableau de bord
+
 ```
 
 ## 🎯 Flux de Données
